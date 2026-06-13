@@ -56,60 +56,141 @@ subroutine rotate2D(xcoords,anglez)
 end subroutine rotate2D
 
 !
-!--3D rotation (about x, y and z axes)
-!  This is done in the order z-y-x
+!--3D rotation around x axis
 !
-subroutine rotate3D(xcoords,anglex,angley,anglez,zobs,dz1)
- real, intent(inout) :: xcoords(3)
- real, intent(in) :: anglex, angley, anglez, zobs, dz1
- real :: x, y, z, r, phi, zfrac
-
- x = xcoords(1)
- y = xcoords(2)
- z = xcoords(3)
-!
-!--rotate about z
-!
- if (abs(anglez) > tiny(anglez)) then
-    r = sqrt(x**2 + y**2)
-    phi = atan2(y,x)
-    phi = phi - anglez
-    x = r*cos(phi)
-    y = r*sin(phi)
- endif
-!
-!--rotate about y
-!
- if (abs(angley) > tiny(angley)) then
-    r = sqrt(z**2 + x**2)
-    phi = atan2(z,x)
-    phi = phi - angley
-    z = r*sin(phi)
-    x = r*cos(phi)
- endif
-!
-!--rotate about x
-!
- if (abs(anglex) > tiny(anglex)) then
+subroutine rotate3D_x(xcoords,anglex)
+  real, intent(inout) :: xcoords(3)
+  real, intent(in) :: anglex
+  real :: x, y, z, r, phi
+  
+  x = xcoords(1)
+  y = xcoords(2)
+  z = xcoords(3)
+  
+  if (abs(anglex) > tiny(anglex)) then
     r = sqrt(y**2 + z**2)
     phi = atan2(z,y)
     phi = phi - anglex
     y = r*cos(phi)
     z = r*sin(phi)
+  endif
+  
+  xcoords = (/x,y,z/)
+end subroutine rotate3D_x
+
+!
+!--3D rotation around y axis
+!
+subroutine rotate3D_y(xcoords,angley)
+  real, intent(inout) :: xcoords(3)
+  real, intent(in) :: angley
+  real :: x, y, z, r, phi
+  
+  x = xcoords(1)
+  y = xcoords(2)
+  z = xcoords(3)
+  
+  if (abs(angley) > tiny(angley)) then
+    r = sqrt(z**2 + x**2)
+    phi = atan2(z,x)
+    phi = phi - angley
+    z = r*sin(phi)
+    x = r*cos(phi)
+  endif
+  
+  xcoords = (/x,y,z/)
+end subroutine rotate3D_y
+
+!
+!--3D rotation around z axis
+!
+subroutine rotate3D_z(xcoords,anglez)
+  real, intent(inout) :: xcoords(3)
+  real, intent(in) :: anglez
+  real :: x, y, z, r, phi
+  
+  x = xcoords(1)
+  y = xcoords(2)
+  z = xcoords(3)
+  
+  if (abs(anglez) > tiny(anglez)) then
+    r = sqrt(x**2 + y**2)
+    phi = atan2(y,x)
+    phi = phi - anglez
+    x = r*cos(phi)
+    y = r*sin(phi)
+  endif
+  
+  xcoords = (/x,y,z/)
+end subroutine rotate3D_z
+
+!
+!--3D rotation (about x, y and z axes)
+!  This is done in the order z-y-x by default but alternate orders can be used.
+!  The rotation order can also be inverted (this order undoes the original rotation order).
+!
+subroutine rotate3D(xcoords,anglex,angley,anglez,zobs,dz1,rotationOrderIn,invertRotationOrder)
+ real, intent(inout) :: xcoords(3)
+ real, intent(in) :: anglex, angley, anglez, zobs, dz1
+ real :: zfrac
+ character(len=3), intent(in), optional :: rotationOrderIn
+ logical, intent(in), optional :: invertRotationOrder
+ character(len=3) :: rotationOrder
+ 
+ 
+ rotationOrder="zyx"
+ if(present(rotateOrder)) then
+    rotationOrder=rotationOrderIn
  endif
+    
+ ! This will use a rotation order that will undo the original rotation order.
+ if(present(invertRotationOrder)) then
+    if(invertRotationOrder) then
+       rotationOrder=rotationOrder(3:3)//rotationOrder(2:2)//rotationOrder(1:1)
+    endif
+ endif
+
+ select case(rotationOrder)
+    case("xyz")
+       call rotate3D_x(xcoords,anglex)
+       call rotate3D_y(xcoords,angley)
+       call rotate3D_z(xcoords,anglez)
+    case("xzy")
+       call rotate3D_x(xcoords,anglex)
+       call rotate3D_z(xcoords,anglez)
+       call rotate3D_y(xcoords,angley)
+    case("yxz")
+       call rotate3D_y(xcoords,angley)
+       call rotate3D_x(xcoords,anglex)
+       call rotate3D_z(xcoords,anglez)
+    case("yzx")
+       call rotate3D_y(xcoords,angley)
+       call rotate3D_z(xcoords,anglez)
+       call rotate3D_x(xcoords,anglex)
+    case("zxy")
+       call rotate3D_z(xcoords,anglez)
+       call rotate3D_x(xcoords,anglex)
+       call rotate3D_y(xcoords,angley)
+    case("zyx")
+       call rotate3D_z(xcoords,anglez)
+       call rotate3D_y(xcoords,angley)
+       call rotate3D_x(xcoords,anglex)
+    case default
+       stop "Invalid rotation order "//rotationOrder
+ end select
+
 !
 !--change perspective according to z depth
 !  (for straight rotation == parallel projections use dz1= 0 on input)
 !  zobs is the z position of the observer.
 !
  if (abs(dz1) > tiny(dz1)) then
-    zfrac = abs(dz1/(z-zobs))
+    zfrac = abs(dz1/(xcoords(3)-zobs))
  else
     zfrac = 1.0
  endif
- xcoords(1) = x*zfrac
- xcoords(2) = y*zfrac
- xcoords(3) = z
+ xcoords(1) = xcoords(1)*zfrac
+ xcoords(2) = xcoords(2)*zfrac 
 
  return
 end subroutine rotate3D
@@ -181,7 +262,7 @@ subroutine rotate_axes2D(ioption,xmin,xmax,xorigin,anglez)
 end subroutine rotate_axes2D
 
 subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
-                         anglex,angley,anglez,zobs,dz1)
+                         anglex,angley,anglez,zobs,dz1,rotationOrder,invertRotationOrder)
  use plotlib, only:plot_poly,plot_sfs,plot_arro,plot_line
  integer, intent(in) :: ioption,iplotx,iploty
  real, intent(in), dimension(3) :: xmin,xmax,xorigin
@@ -192,6 +273,8 @@ subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
  real, dimension(3) :: xpttemp
  real, dimension(2) :: xline,yline
  real :: dx
+ character(len=3), intent(in), optional :: rotationOrder
+ logical, intent(in), optional :: invertRotationOrder
 
  !
  ! plot various options for the 3D axes
@@ -210,7 +293,7 @@ subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
        xpt(idim,2) = xmax(idim)
        do i=1,2
           xpttemp(:) = xpt(:,i) - xorigin(:)
-          call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1)
+          call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1,rotationOrder,invertRotationOrder)
           xpt(:,i) = xpttemp(:) + xorigin(:)
        enddo
        !--plot each axis as an arrow
@@ -245,7 +328,7 @@ subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
     !
     do i=1,8
        xpttemp(:) = xpt(:,i) - xorigin(:)
-       call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1)
+       call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1,rotationOrder,invertRotationOrder)
        xpt(:,i) = xpttemp(:) + xorigin(:)
     enddo
     !
@@ -282,7 +365,7 @@ subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
        xpt(2,2) = xmax(2)
        do i=1,2
           xpttemp(:) = xpt(:,i) - xorigin(:)
-          call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1)
+          call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1,rotationOrder,invertRotationOrder)
           xpt(:,i) = xpttemp(:) + xorigin(:)
        enddo
        call plot_line(2,xpt(iplotx,1:2),xpt(iploty,1:2))
@@ -300,7 +383,7 @@ subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
        xpt(1,2) = xmax(1)
        do i=1,2
           xpttemp(:) = xpt(:,i) - xorigin(:)
-          call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1)
+          call rotate3D(xpttemp(:),anglex,angley,anglez,zobs,dz1,rotationOrder,invertRotationOrder)
           xpt(:,i) = xpttemp(:) + xorigin(:)
        enddo
        call plot_line(2,xpt(iplotx,1:2),xpt(iploty,1:2))
@@ -311,7 +394,7 @@ subroutine rotate_axes3D(ioption,iplotx,iploty,xmin,xmax,xorigin, &
 
 end subroutine rotate_axes3D
 
-subroutine rotate_particles(n,x,y,z,anglex,angley,anglez,v)
+subroutine rotate_particles(n,x,y,z,anglex,angley,anglez,v,rotationOrder,invertRotationOrder)
  integer, intent(in) :: n
  real,    intent(inout) :: x(n),y(n),z(n)
  real,    intent(in) :: anglex,angley,anglez
@@ -319,6 +402,8 @@ subroutine rotate_particles(n,x,y,z,anglex,angley,anglez,v)
  real :: ax,ay,az,xi(3)
  real, parameter :: pi = 4.*atan(1.)
  integer :: i
+ character(len=3), intent(in), optional :: rotationOrder
+ logical, intent(in), optional :: invertRotationOrder
 
  if (abs(anglez)>0. .or. abs(angley)>0. .or. abs(anglex)>0.) then
     print*, 'Rotating particles around (z,y,x) by',anglez,angley,anglex
@@ -327,11 +412,11 @@ subroutine rotate_particles(n,x,y,z,anglex,angley,anglez,v)
     az = anglez*pi/180.0
     do i=1,n
        xi = (/x(i),y(i),z(i)/)
-       call rotate3D(xi,ax,ay,az,0.,0.)
+       call rotate3D(xi,ax,ay,az,0.,0.,rotationOrder,invertRotationOrder)
        x(i) = xi(1)
        y(i) = xi(2)
        z(i) = xi(3)
-       if (present(v)) call rotate3D(v(:,i),ax,ay,az,0.,0.)
+       if (present(v)) call rotate3D(v(:,i),ax,ay,az,0.,0.,rotationOrder,invertRotationOrder)
     enddo
  endif
 
