@@ -136,7 +136,7 @@ subroutine rotate3D(xcoords,anglex,angley,anglez,zobs,dz1,rotationOrderIn,invert
  character(len=3), intent(in), optional :: rotationOrderIn
  logical, intent(in), optional :: invertRotationOrder
  character(len=3) :: rotationOrder
- 
+ real :: angleSign
  
  rotationOrder="zyx"
  if(present(rotateOrder)) then
@@ -144,37 +144,40 @@ subroutine rotate3D(xcoords,anglex,angley,anglez,zobs,dz1,rotationOrderIn,invert
  endif
     
  ! This will use a rotation order that will undo the original rotation order.
+ ! The angles must also be negated for this to work.
+ angleSign=1.0
  if(present(invertRotationOrder)) then
     if(invertRotationOrder) then
        rotationOrder=rotationOrder(3:3)//rotationOrder(2:2)//rotationOrder(1:1)
+       angleSign=-1.0
     endif
  endif
 
  select case(rotationOrder)
     case("xyz")
-       call rotate3D_x(xcoords,anglex)
-       call rotate3D_y(xcoords,angley)
-       call rotate3D_z(xcoords,anglez)
+       call rotate3D_x(xcoords,anglex*angleSign)
+       call rotate3D_y(xcoords,angley*angleSign)
+       call rotate3D_z(xcoords,anglez*angleSign)
     case("xzy")
-       call rotate3D_x(xcoords,anglex)
-       call rotate3D_z(xcoords,anglez)
-       call rotate3D_y(xcoords,angley)
+       call rotate3D_x(xcoords,anglex*angleSign)
+       call rotate3D_z(xcoords,anglez*angleSign)
+       call rotate3D_y(xcoords,angley*angleSign)
     case("yxz")
-       call rotate3D_y(xcoords,angley)
-       call rotate3D_x(xcoords,anglex)
-       call rotate3D_z(xcoords,anglez)
+       call rotate3D_y(xcoords,angley*angleSign)
+       call rotate3D_x(xcoords,anglex*angleSign)
+       call rotate3D_z(xcoords,anglez*angleSign)
     case("yzx")
-       call rotate3D_y(xcoords,angley)
-       call rotate3D_z(xcoords,anglez)
-       call rotate3D_x(xcoords,anglex)
+       call rotate3D_y(xcoords,angley*angleSign)
+       call rotate3D_z(xcoords,anglez*angleSign)
+       call rotate3D_x(xcoords,anglex*angleSign)
     case("zxy")
-       call rotate3D_z(xcoords,anglez)
-       call rotate3D_x(xcoords,anglex)
-       call rotate3D_y(xcoords,angley)
+       call rotate3D_z(xcoords,anglez*angleSign)
+       call rotate3D_x(xcoords,anglex*angleSign)
+       call rotate3D_y(xcoords,angley*angleSign)
     case("zyx")
-       call rotate3D_z(xcoords,anglez)
-       call rotate3D_y(xcoords,angley)
-       call rotate3D_x(xcoords,anglex)
+       call rotate3D_z(xcoords,anglez*angleSign)
+       call rotate3D_y(xcoords,angley*angleSign)
+       call rotate3D_x(xcoords,anglex*angleSign)
     case default
        stop "Invalid rotation order "//rotationOrder
  end select
