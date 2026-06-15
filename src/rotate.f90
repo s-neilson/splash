@@ -139,7 +139,7 @@ subroutine rotate3D(xcoords,anglex,angley,anglez,zobs,dz1,rotationOrderIn,invert
  real :: angleSign
  
  rotationOrder="zyx"
- if(present(rotateOrder)) then
+ if(present(rotationOrderIn)) then
     rotationOrder=rotationOrderIn
  endif
     
